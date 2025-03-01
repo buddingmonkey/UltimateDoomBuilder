@@ -28,6 +28,19 @@ __Note:__ this is experimental. None of the main developers are using Linux as a
   - Run `make BUILDTYPE=Debug` in the root project directory
   - This includes a debug output terminal in the bottom panel
 
+More detailed info can be found in the **editor documentation** (Refmanual.chm)
+
+## Building on macOS
+These instructions are for macOS:
+
+- Install .NET Core SDK from https://dotnet.microsoft.com/download
+- Install required packages: `brew install mono`
+- Clone the repository: `git clone https://github.com/UltimateDoomBuilder/UltimateDoomBuilder.git`
+- Compile UDB: `cd UltimateDoomBuilder && make mac`
+- Run UDB: `cd Build && ./builder`
+- Alternatively, to compile UDB in debug mode:
+  - Run `make mac BUILDTYPE=Debug` in the root project directory
+
 **Links:**
 - [Official thread link](https://forum.zdoom.org/viewtopic.php?f=232&t=66745)
 - [Git builds at DRDTeam.org](https://devbuilds.drdteam.org/ultimatedoombuilder/) 

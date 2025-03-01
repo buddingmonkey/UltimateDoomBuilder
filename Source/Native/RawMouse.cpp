@@ -200,6 +200,10 @@ float RawMouse_GetY(RawMouse* mouse)
 static Display *display = NULL;
 #endif
 
+#ifdef UDB_MAC
+#import <ApplicationServices/ApplicationServices.h>
+#endif
+
 void MouseInput_ShowCursor(bool show)
 {
 #ifdef UDB_LINUX
@@ -215,6 +219,13 @@ void MouseInput_ShowCursor(bool show)
 	else
 		XFixesHideCursor(display, DefaultRootWindow(display));
 	XSync(display, True);
+#elif defined(UDB_MAC)
+    if (show)
+        CGDisplayShowCursor(kCGDirectMainDisplay);
+    else
+        CGDisplayHideCursor(kCGDirectMainDisplay);
+#else
+    ShowCursor(show ? TRUE : FALSE);
 #endif
 }
 

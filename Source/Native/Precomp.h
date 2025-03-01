@@ -36,6 +36,10 @@
 #undef max
 #endif
 
+#ifdef UDB_MAC
+#include <Cocoa/Cocoa.h>
+#endif
+
 #include "OpenGL/gl_load/gl_system.h"
 
 #define APART(x) (static_cast<uint32_t>(x) >> 24)

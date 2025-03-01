@@ -353,6 +353,8 @@ std::unique_ptr<IOpenGLContext> IOpenGLContext::Create(void* disp, void* window)
 
 #elif defined(__APPLE__)
 
+// Use our UDB_MAC implementation instead
+#if !defined(UDB_MAC)
 class OpenGLContext : public IOpenGLContext
 {
 public:
@@ -371,10 +373,11 @@ public:
 
 private:
 };
+#endif
 
 std::unique_ptr<IOpenGLContext> IOpenGLContext::Create(void* disp, void* window)
 {
-	auto ctx = std::make_unique<OpenGLContext>(window);
+	auto ctx = std::make_unique<OpenGLContext>(disp, window);
 	if (!ctx->IsValid()) return nullptr;
 	return ctx;
 }
@@ -927,13 +930,6 @@ GLXContext OpenGLContext::create_context_glx_1_3(GLXContext shared_context)
 	return context;
 }
 
-std::unique_ptr<IOpenGLContext> IOpenGLContext::Create(void* disp, void* window)
-{
-	auto ctx = std::make_unique<OpenGLContext>(disp, window);
-	if (!ctx->IsValid()) return nullptr;
-	return ctx;
-}
-
 void* GL_GetProcAddress(const char* function_name)
 {
 	if (glx_global.glXGetProcAddressARB)
@@ -942,6 +938,116 @@ void* GL_GetProcAddress(const char* function_name)
 		return (void*)glx_global.glXGetProcAddress((GLubyte*)function_name);
 	else
 		return nullptr;
+}
+
+#endif
+
+#ifdef UDB_MAC
+
+class OpenGLContext : public IOpenGLContext
+{
+public:
+	OpenGLContext(void* disp, void* window);
+	~OpenGLContext();
+	
+	void MakeCurrent() override;
+	void ClearCurrent() override;
+	void SwapBuffers() override;
+	bool IsCurrent() override;
+	
+	int GetWidth() const override;
+	int GetHeight() const override;
+	
+	bool IsValid() const { return context != nil; }
+	
+private:
+	NSWindow* window;
+	NSOpenGLContext* context;
+	NSOpenGLPixelFormat* pixelFormat;
+	int width;
+	int height;
+};
+
+OpenGLContext::OpenGLContext(void* disp, void* win)
+{
+	window = (NSWindow*)win;
+	width = (int)[window frame].size.width;
+	height = (int)[window frame].size.height;
+	
+	// Create pixel format for modern OpenGL
+	NSOpenGLPixelFormatAttribute attrs[] = {
+		NSOpenGLPFAOpenGLProfile, NSOpenGLProfileVersion3_2Core,
+		NSOpenGLPFADoubleBuffer,
+		NSOpenGLPFADepthSize, 24,
+		NSOpenGLPFAStencilSize, 8,
+		NSOpenGLPFAAccelerated,
+		0
+	};
+	
+	pixelFormat = [[NSOpenGLPixelFormat alloc] initWithAttributes:attrs];
+	if (!pixelFormat) {
+		SetError("Failed to create OpenGL pixel format");
+		return;
+	}
+	
+	// Create OpenGL context
+	context = [[NSOpenGLContext alloc] initWithFormat:pixelFormat shareContext:nil];
+	if (!context) {
+		SetError("Failed to create OpenGL context");
+		return;
+	}
+	
+	// Attach to view
+	NSView* view = [window contentView];
+	[context setView:view];
+	
+	// Make current and initialize OpenGL
+	[context makeCurrentContext];
+	static OpenGLLoadFunctions init_once;
+}
+
+OpenGLContext::~OpenGLContext()
+{
+	if (context) {
+		[context release];
+	}
+	if (pixelFormat) {
+		[pixelFormat release];
+	}
+}
+
+void OpenGLContext::MakeCurrent()
+{
+	if (context) {
+		[context makeCurrentContext];
+	}
+}
+
+void OpenGLContext::ClearCurrent()
+{
+	[NSOpenGLContext clearCurrentContext];
+}
+
+void OpenGLContext::SwapBuffers()
+{
+	if (context) {
+		[context flushBuffer];
+	}
+}
+
+bool OpenGLContext::IsCurrent()
+{
+	return context == [NSOpenGLContext currentContext];
+}
+
+int OpenGLContext::GetWidth() const
+{
+	return width;
+}
+
+int OpenGLContext::GetHeight() const
+{
+	return height;
 }
 
 #endif
